@@ -1,5 +1,6 @@
 import pygame
 import numpy as np
+import pandas as pd
 
 SCREEN_WIDTH = 484
 SCREEN_HEIGHT = 784 + 10 + 60
@@ -253,22 +254,22 @@ def alive_left(birdX, birdY):
 
 def save_state(jump):
     global previous_x, previous_y
-    f = open("data.txt", "a")
-    f.write(
-        str(playerX)
-        + " "
-        + str(playerY)
-        + " "
-        + str(previous_x)
-        + " "
-        + str(previous_y)
-        + " "
-        + str(matrix_spikes)
-        + " "
-        + str(jump)
-        + "\n"
-    )
-    f.close()
+    data = {
+        "X": [],
+        "Y": [],
+        "Previous_X": [],
+        "Previous_Y": [],
+        "Spikes_Matrix": [],
+        "Jump": [],
+    }
+    data["X"].append(playerX)
+    data["Y"].append(playerY)
+    data["Previous_X"].append(previous_x)
+    data["Previous_Y"].append(previous_y)
+    data["Spikes_Matrix"].append(matrix_spikes)
+    data["Jump"].append(jump)
+    save_data = pd.DataFrame(data)
+    save_data.to_csv("data.csv", mode="a", header=False, index=False)
     previous_x = playerX
     previous_y = playerY
 
