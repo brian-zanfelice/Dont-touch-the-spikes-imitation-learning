@@ -24,7 +24,7 @@ gravity = 0.3
 up_velocity = 7.0
 goingright = True
 SCREEN_COLOR = (200, 200, 200)
-epsilon = 0.6
+epsilon = 1.0
 ALIVE = False
 NUM_SPIKES = 3
 
@@ -42,6 +42,146 @@ RIGHT_SPIKE_HITBOX = SCREEN_WIDTH - SPIKE_HITBOX_WIDTH
 
 # Score
 score_value = 0
+
+
+def save_state(jump):
+    global previous_x, previous_y
+    data = {
+        "X": [],
+        "Y": [],
+        "Previous_X": [],
+        "Previous_Y": [],
+        "Spikes_Matrix": [],
+        "Jump": [],
+    }
+    data["X"].append(playerX)
+    data["Y"].append(playerY)
+    data["Previous_X"].append(previous_x)
+    data["Previous_Y"].append(previous_y)
+    data["Spikes_Matrix"].append(matrix_spikes)
+    data["Jump"].append(jump)
+    save_data = pd.DataFrame(data)
+    save_data.to_csv("data.csv", mode="a", header=False, index=False)
+    previous_x = playerX
+    previous_y = playerY
+
+
+def alive_right(birdX, birdY):
+    show_player_right(birdX, birdY)
+    global playerX
+    if birdX >= SCREEN_WIDTH - 46:
+        playerX = SCREEN_WIDTH - 46
+        hit_wall()
+    if check_spikes():
+        die()
+
+
+def alive_left(birdX, birdY):
+    show_player_left(birdX, birdY)
+    global playerX
+    if birdX <= 0:
+        playerX = 0
+        hit_wall()
+    if check_spikes():
+        die()
+
+
+def hit_wall():
+    global matrix_spikes, goingright, playerX_velocity, score_value
+    goingright = not goingright
+    score_value = score_value + 1
+    playerX_velocity = -playerX_velocity
+    if score_value <= 50:
+        scheduler()
+    if np.random.uniform(0, 1) < epsilon:
+        num_spikes = NUM_SPIKES + 1
+    else:
+        num_spikes = NUM_SPIKES
+
+    for i in range(12):
+        matrix_spikes[i] = 0
+    for i in range(num_spikes):
+        randint = np.random.randint(12, size=1)[0]
+        while matrix_spikes[randint]:
+            randint = (randint + 1) % 12
+        matrix_spikes[randint] = 1
+
+
+def die():
+    global ALIVE, playerX, playerY, playerX_velocity, playerY_velocity, goingright, matrix_spikes, NUM_SPIKES
+    if score_value > 0 and ALIVE:
+        save_score()
+    ALIVE = False
+    goingright = True
+    playerX = SCREEN_WIDTH / 2 - 46 / 2
+    playerY = 70 / 2 + SCREEN_HEIGHT / 2 - 46 / 2
+    playerX_velocity = 4
+    playerY_velocity = 0
+    matrix_spikes = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    NUM_SPIKES = 3
+
+
+def save_score():
+    f = open("score.txt", "a")
+    f.write(str(score_value) + "\n")
+    f.close()
+
+
+def show_spikes():
+    spike_y = 10 + 60 + gap
+    spike_x = gap
+    y_top = 10 + 60
+    y_bottom = SCREEN_HEIGHT - 1
+    pygame.draw.rect(screen, (130, 130, 130), pygame.Rect(0, 0, SCREEN_WIDTH, 10 + 60))
+    for i in range(12):
+        if matrix_spikes[i]:
+            show_spike(spike_y + (spike_height + gap) * i, goingright)
+    for i in range(7):
+        x_final = spike_x + spike_height
+        pygame.draw.polygon(
+            screen,
+            (130, 130, 130),
+            (
+                (spike_x, y_top),
+                (x_final, y_top),
+                ((spike_x + x_final) / 2, y_top + spike_width),
+            ),
+        )
+        pygame.draw.polygon(
+            screen,
+            (130, 130, 130),
+            (
+                (spike_x, y_bottom),
+                (x_final, y_bottom),
+                ((spike_x + x_final) / 2, y_bottom - spike_width),
+            ),
+        )
+        spike_x = spike_x + spike_height + gap
+
+
+def show_spike(y_0, right):
+    y_final = y_0 + spike_height
+    if right:
+        x = SCREEN_WIDTH
+        x_point = x - spike_width
+    else:
+        x = 0
+        x_point = x + spike_width
+    pygame.draw.polygon(
+        screen,
+        (130, 130, 130),
+        (
+            (x, y_0),
+            (x, y_final),
+            (x_point, (y_final + y_0) / 2),
+        ),
+    )
+
+
+def show_score(x, y):
+    font = pygame.font.Font("freesansbold.ttf", 32)
+    score = font.render("Score : " + str(score_value), True, (0, 0, 0))
+    screen.blit(score, (x, y))
 
 
 def check_spikes():
@@ -103,14 +243,8 @@ def check_spikes_right():
     return False
 
 
-def show_score(x, y):
-    font = pygame.font.Font("freesansbold.ttf", 32)
-    score = font.render("Score : " + str(score_value), True, (0, 0, 0))
-    screen.blit(score, (x, y))
-
-
 def scheduler():
-    global playerX_velocity, NUM_SPIKES
+    global playerX_velocity, NUM_SPIKES, epsilon
     if score_value % 5 == 0:
         if playerX_velocity > 0:
             playerX_velocity += 0.3
@@ -119,57 +253,7 @@ def scheduler():
 
     if score_value % 10 == 0:
         NUM_SPIKES += 1
-
-
-def show_spikes():
-    spike_y = 10 + 60 + gap
-    spike_x = gap
-    y_top = 10 + 60
-    y_bottom = SCREEN_HEIGHT - 1
-    pygame.draw.rect(screen, (130, 130, 130), pygame.Rect(0, 0, SCREEN_WIDTH, 10 + 60))
-    for i in range(12):
-        if matrix_spikes[i]:
-            show_spike(spike_y + (spike_height + gap) * i, goingright)
-    for i in range(7):
-        x_final = spike_x + spike_height
-        pygame.draw.polygon(
-            screen,
-            (130, 130, 130),
-            (
-                (spike_x, y_top),
-                (x_final, y_top),
-                ((spike_x + x_final) / 2, y_top + spike_width),
-            ),
-        )
-        pygame.draw.polygon(
-            screen,
-            (130, 130, 130),
-            (
-                (spike_x, y_bottom),
-                (x_final, y_bottom),
-                ((spike_x + x_final) / 2, y_bottom - spike_width),
-            ),
-        )
-        spike_x = spike_x + spike_height + gap
-
-
-def show_spike(y_0, right):
-    y_final = y_0 + spike_height
-    if right:
-        x = SCREEN_WIDTH
-        x_point = x - spike_width
-    else:
-        x = 0
-        x_point = x + spike_width
-    pygame.draw.polygon(
-        screen,
-        (130, 130, 130),
-        (
-            (x, y_0),
-            (x, y_final),
-            (x_point, (y_final + y_0) / 2),
-        ),
-    )
+        epsilon -= 0.2
 
 
 def game_over(keys, previous_keys):
@@ -190,88 +274,6 @@ def show_player_right(x, y):
 
 def show_player_left(x, y):
     screen.blit(bird_leftImg, (x, y))
-
-
-def save_score():
-    f = open("score.txt", "a")
-    f.write(str(score_value) + "\n")
-    f.close()
-
-
-def die():
-    global ALIVE, playerX, playerY, playerX_velocity, playerY_velocity, goingright, matrix_spikes, NUM_SPIKES
-    if score_value > 0 and ALIVE:
-        save_score()
-    ALIVE = False
-    goingright = True
-    playerX = SCREEN_WIDTH / 2 - 46 / 2
-    playerY = 70 / 2 + SCREEN_HEIGHT / 2 - 46 / 2
-    playerX_velocity = 4
-    playerY_velocity = 0
-    matrix_spikes = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-    NUM_SPIKES = 3
-
-
-def hit_wall():
-    global matrix_spikes, goingright, playerX_velocity, score_value
-    goingright = not goingright
-    score_value = score_value + 1
-    playerX_velocity = -playerX_velocity
-    if score_value <= 50:
-        scheduler()
-    if np.random.uniform(0, 1) < epsilon:
-        num_spikes = NUM_SPIKES + 1
-    else:
-        num_spikes = NUM_SPIKES
-    for i in range(12):
-        matrix_spikes[i] = 0
-    for i in range(num_spikes):
-        randint = np.random.randint(12, size=1)[0]
-        while matrix_spikes[randint]:
-            randint = (randint + 1) % 12
-        matrix_spikes[randint] = 1
-
-
-def alive_right(birdX, birdY):
-    show_player_right(birdX, birdY)
-    global playerX
-    if birdX >= SCREEN_WIDTH - 46:
-        playerX = SCREEN_WIDTH - 46
-        hit_wall()
-    if check_spikes():
-        die()
-
-
-def alive_left(birdX, birdY):
-    show_player_left(birdX, birdY)
-    global playerX
-    if birdX <= 0:
-        playerX = 0
-        hit_wall()
-    if check_spikes():
-        die()
-
-
-def save_state(jump):
-    global previous_x, previous_y
-    data = {
-        "X": [],
-        "Y": [],
-        "Previous_X": [],
-        "Previous_Y": [],
-        "Spikes_Matrix": [],
-        "Jump": [],
-    }
-    data["X"].append(playerX)
-    data["Y"].append(playerY)
-    data["Previous_X"].append(previous_x)
-    data["Previous_Y"].append(previous_y)
-    data["Spikes_Matrix"].append(matrix_spikes)
-    data["Jump"].append(jump)
-    save_data = pd.DataFrame(data)
-    save_data.to_csv("data.csv", mode="a", header=False, index=False)
-    previous_x = playerX
-    previous_y = playerY
 
 
 def simulate(keys, previous_keys):
@@ -299,3 +301,6 @@ def simulate(keys, previous_keys):
     else:
         game_over(keys, previous_keys)
         show_score(10, 10)
+
+
+exec(open("./main.py").read())
