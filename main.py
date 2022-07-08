@@ -38,7 +38,6 @@ previous_keys = pygame.key.get_pressed()
 while running:
 
     clock.tick(60)
-
     keys = pygame.key.get_pressed()
     process_inputs()
     simulation.simulate(keys, previous_keys)
@@ -46,7 +45,6 @@ while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-            simulation.die()
 
     previous_keys = keys
     pygame.display.update()

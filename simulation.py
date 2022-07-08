@@ -1,6 +1,7 @@
 import pygame
 import numpy as np
 import pandas as pd
+import time
 
 SCREEN_WIDTH = 484
 SCREEN_HEIGHT = 784 + 10 + 60
@@ -119,6 +120,7 @@ def die():
     playerY_velocity = 0
     matrix_spikes = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     NUM_SPIKES = 3
+    time.sleep(0.4)
 
 
 def save_score():
@@ -133,11 +135,14 @@ def show_spikes():
     y_top = 10 + 60
     y_bottom = SCREEN_HEIGHT - 1
     pygame.draw.rect(screen, (130, 130, 130), pygame.Rect(0, 0, SCREEN_WIDTH, 10 + 60))
+    # side spikes
     for i in range(12):
         if matrix_spikes[i]:
             show_spike(spike_y + (spike_height + gap) * i, goingright)
+    # top and bottom spikes
     for i in range(7):
         x_final = spike_x + spike_height
+        # top spikes
         pygame.draw.polygon(
             screen,
             (130, 130, 130),
@@ -147,6 +152,7 @@ def show_spikes():
                 ((spike_x + x_final) / 2, y_top + spike_width),
             ),
         )
+        # bottom spikes
         pygame.draw.polygon(
             screen,
             (130, 130, 130),
@@ -204,12 +210,11 @@ def check_spikes():
 
 
 def check_spikes_left():
-    check_size = SPIKE_HITBOX_HEIGHT + BIRD_SIZE
-    for i in range(12):
-        if (
-            matrix_spikes[i]
-            and abs(playerY - HEIGHTS_OF_SPIKES_HITBOX[i]) <= check_size
-        ):
+    y_real = playerY - 70
+    index = int(y_real / (gap + spike_height))
+    vetor = [(index - 1) % 12, index, (index + 1) % 12]
+    for i in vetor:
+        if matrix_spikes[i]:
             spike_hitbox = pygame.Rect(
                 0,
                 HEIGHTS_OF_SPIKES_HITBOX[i] - SPIKE_HITBOX_HEIGHT / 2,
@@ -224,12 +229,11 @@ def check_spikes_left():
 
 
 def check_spikes_right():
-    check_size = SPIKE_HITBOX_HEIGHT + BIRD_SIZE
-    for i in range(12):
-        if (
-            matrix_spikes[i]
-            and abs(playerY - HEIGHTS_OF_SPIKES_HITBOX[i]) <= check_size
-        ):
+    y_real = playerY - 70
+    index = int(y_real / (gap + spike_height))
+    vetor = [(index - 1) % 12, index, (index + 1) % 12]
+    for i in vetor:
+        if matrix_spikes[i]:
             spike_hitbox = pygame.Rect(
                 RIGHT_SPIKE_HITBOX,
                 HEIGHTS_OF_SPIKES_HITBOX[i] - SPIKE_HITBOX_HEIGHT / 2,
