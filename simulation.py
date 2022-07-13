@@ -15,7 +15,7 @@ bird_leftImg = pygame.transform.scale(bird_leftImg, (BIRD_SIZE, BIRD_SIZE))
 bird_rightImg = pygame.transform.scale(bird_rightImg, (BIRD_SIZE, BIRD_SIZE))
 playerX = SCREEN_WIDTH / 2 - BIRD_SIZE / 2
 playerY = 70 / 2 + SCREEN_HEIGHT / 2 - BIRD_SIZE / 2
-playerX_velocity = 4
+playerX_velocity = 4.3
 playerY_velocity = 0
 previous_x = playerX
 previous_y = playerY
@@ -25,6 +25,9 @@ gravity = 0.3
 up_velocity = 7.0
 goingright = True
 SCREEN_COLOR = (200, 200, 200)
+SPIKE_COLOR = (130, 130, 130)
+DEATH_COLOR = (255, 124, 124)
+DEATH_SPIKE_COLOR = (255, 0, 0)
 epsilon = 1.0
 ALIVE = False
 NUM_SPIKES = 3
@@ -39,7 +42,6 @@ HEIGHTS_OF_SPIKES_HITBOX = [109, 173, 237, 301, 365, 429, 493, 557, 621, 685, 74
 SPIKE_HITBOX_HEIGHT = 15
 SPIKE_HITBOX_WIDTH = 20
 RIGHT_SPIKE_HITBOX = SCREEN_WIDTH - SPIKE_HITBOX_WIDTH
-
 
 # Score
 score_value = 0
@@ -131,10 +133,10 @@ def save_score():
 
 def show_spikes():
     spike_y = 10 + 60 + gap
-    spike_x = gap
+    spike_x = gap * 2
     y_top = 10 + 60
     y_bottom = SCREEN_HEIGHT - 1
-    pygame.draw.rect(screen, (130, 130, 130), pygame.Rect(0, 0, SCREEN_WIDTH, 10 + 60))
+    pygame.draw.rect(screen, SPIKE_COLOR, pygame.Rect(0, 0, SCREEN_WIDTH, 10 + 60))
     # side spikes
     for i in range(12):
         if matrix_spikes[i]:
@@ -145,7 +147,7 @@ def show_spikes():
         # top spikes
         pygame.draw.polygon(
             screen,
-            (130, 130, 130),
+            SPIKE_COLOR,
             (
                 (spike_x, y_top),
                 (x_final, y_top),
@@ -155,7 +157,7 @@ def show_spikes():
         # bottom spikes
         pygame.draw.polygon(
             screen,
-            (130, 130, 130),
+            SPIKE_COLOR,
             (
                 (spike_x, y_bottom),
                 (x_final, y_bottom),
@@ -175,7 +177,7 @@ def show_spike(y_0, right):
         x_point = x + spike_width
     pygame.draw.polygon(
         screen,
-        (130, 130, 130),
+        SPIKE_COLOR,
         (
             (x, y_0),
             (x, y_final),
@@ -192,10 +194,9 @@ def show_score(x, y):
 
 def check_spikes():
     dead = False
-
-    if playerY >= SCREEN_HEIGHT - 46 - spike_width + 8:
+    if playerY >= SCREEN_HEIGHT - 46 - spike_width + 16:
         dead = True
-    if playerY <= 60 + spike_width - 8:
+    if playerY <= 60 + spike_width - 16:
         dead = True
     if goingright and playerX + BIRD_SIZE >= RIGHT_SPIKE_HITBOX:
         dead = check_spikes_right()
@@ -248,7 +249,7 @@ def check_spikes_right():
 
 
 def scheduler():
-    global playerX_velocity, NUM_SPIKES, epsilon
+    global playerX_velocity, NUM_SPIKES, epsilon, SCREEN_COLOR, SPIKE_COLOR
     if score_value % 5 == 0:
         if playerX_velocity > 0:
             playerX_velocity += 0.3
@@ -258,14 +259,19 @@ def scheduler():
     if score_value % 10 == 0:
         NUM_SPIKES += 1
         epsilon -= 0.2
+    if score_value == 50:
+        SCREEN_COLOR = DEATH_COLOR
+        SPIKE_COLOR = DEATH_SPIKE_COLOR
 
 
 def game_over(keys, previous_keys):
-    global ALIVE, score_value, playerY_velocity
+    global ALIVE, score_value, playerY_velocity, SCREEN_COLOR, SPIKE_COLOR
     over_font = pygame.font.Font("freesansbold.ttf", 32)
     over_text = over_font.render("PRESS SPACE TO START", True, (255, 255, 255))
     screen.blit(over_text, (0 + 50, SCREEN_HEIGHT / 2 + 100))
     show_player_right(playerX, playerY)
+    SCREEN_COLOR = (200, 200, 200)
+    SPIKE_COLOR = (130, 130, 130)
     if keys[pygame.K_SPACE] and not previous_keys[pygame.K_SPACE]:
         playerY_velocity = up_velocity
         ALIVE = True
