@@ -7,6 +7,11 @@ SCREEN_WIDTH = 484
 SCREEN_HEIGHT = 784 + 10 + 60
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 
+# Important lines for the code, change the second line to False if the agent is playing or if you are running any test
+# Change to True if you want the agent to play and to False otherwise
+IsAgentPlaying = True
+SaveState = True  # Change to True if you want to save the game state to the .csv and to False otherwise
+
 # Player
 BIRD_SIZE = 46
 bird_leftImg = pygame.image.load("bird_left.png")
@@ -15,7 +20,7 @@ bird_leftImg = pygame.transform.scale(bird_leftImg, (BIRD_SIZE, BIRD_SIZE))
 bird_rightImg = pygame.transform.scale(bird_rightImg, (BIRD_SIZE, BIRD_SIZE))
 playerX = SCREEN_WIDTH / 2 - BIRD_SIZE / 2
 playerY = 70 / 2 + SCREEN_HEIGHT / 2 - BIRD_SIZE / 2
-playerX_velocity = 4.3
+playerX_velocity = 4
 playerY_velocity = 0
 previous_x = playerX
 previous_y = playerY
@@ -46,7 +51,7 @@ RIGHT_SPIKE_HITBOX = SCREEN_WIDTH - SPIKE_HITBOX_WIDTH
 # Score
 score_value = 0
 
-
+# Function for saving the game state to the .csv
 def save_state(jump):
     global previous_x, previous_y
     data = {
@@ -69,6 +74,7 @@ def save_state(jump):
     previous_y = playerY
 
 
+# The functions below are used to create the simulation in pygame and run the game
 def alive_right(birdX, birdY):
     show_player_right(birdX, birdY)
     global playerX
@@ -125,6 +131,7 @@ def die():
     time.sleep(0.4)
 
 
+# Function used to save the score to the .txt after you die
 def save_score():
     f = open("score.txt", "a")
     f.write(str(score_value) + "\n")
@@ -137,14 +144,13 @@ def show_spikes():
     y_top = 10 + 60
     y_bottom = SCREEN_HEIGHT - 1
     pygame.draw.rect(screen, SPIKE_COLOR, pygame.Rect(0, 0, SCREEN_WIDTH, 10 + 60))
-    # side spikes
+    # Side spikes
     for i in range(12):
         if matrix_spikes[i]:
             show_spike(spike_y + (spike_height + gap) * i, goingright)
-    # top and bottom spikes
     for i in range(7):
         x_final = spike_x + spike_height
-        # top spikes
+        # Top spikes
         pygame.draw.polygon(
             screen,
             SPIKE_COLOR,
@@ -154,7 +160,7 @@ def show_spikes():
                 ((spike_x + x_final) / 2, y_top + spike_width),
             ),
         )
-        # bottom spikes
+        # Bottom spikes
         pygame.draw.polygon(
             screen,
             SPIKE_COLOR,
@@ -248,6 +254,7 @@ def check_spikes_right():
     return False
 
 
+# A scheduler used to increase the number of spikes and the X velocity of the birds
 def scheduler():
     global playerX_velocity, NUM_SPIKES, epsilon, SCREEN_COLOR, SPIKE_COLOR
     if score_value % 5 == 0:
@@ -272,7 +279,7 @@ def game_over(keys, previous_keys):
     show_player_right(playerX, playerY)
     SCREEN_COLOR = (200, 200, 200)
     SPIKE_COLOR = (130, 130, 130)
-    if keys[pygame.K_SPACE] and not previous_keys[pygame.K_SPACE]:
+    if keys[pygame.K_SPACE] and not previous_keys[pygame.K_SPACE] or IsAgentPlaying:
         playerY_velocity = up_velocity
         ALIVE = True
         score_value = 0
@@ -286,20 +293,37 @@ def show_player_left(x, y):
     screen.blit(bird_leftImg, (x, y))
 
 
-def simulate(keys, previous_keys):
+# The main function that calls other functions and
+def simulate(net, keys, previous_keys):
 
     screen.fill(SCREEN_COLOR)
     global playerY_velocity, playerX, playerY, ALIVE
     if ALIVE:
         playerY_velocity = playerY_velocity - gravity
         jump = 0
-        if keys[pygame.K_SPACE] and not previous_keys[pygame.K_SPACE]:
+
+        # If the agent is playing
+        if IsAgentPlaying:
+            input_predict = [
+                [
+                    playerX + playerX_velocity,
+                    playerY - playerY_velocity,
+                    playerX,
+                    playerY,
+                    *matrix_spikes,
+                ]
+            ]
+            jump_predict = net.predict(input_predict)
+            print(jump_predict[0][0])
+            if jump_predict[0][0] >= 0.5:
+                jump = 1
+        if (keys[pygame.K_SPACE] and not previous_keys[pygame.K_SPACE]) or jump:
             playerY_velocity = up_velocity
             jump = 1
+        if SaveState:
+            save_state(jump)
         playerX = playerX + playerX_velocity
         playerY = playerY - playerY_velocity
-
-        save_state(jump)
         if goingright:
             alive_right(playerX, playerY)
         else:
@@ -311,6 +335,3 @@ def simulate(keys, previous_keys):
     else:
         game_over(keys, previous_keys)
         show_score(10, 10)
-
-
-exec(open("./main.py").read())

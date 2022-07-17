@@ -1,5 +1,6 @@
 import pygame
 import simulation
+import keras
 
 
 SCREEN_WIDTH = 484
@@ -15,32 +16,19 @@ pygame.display.set_icon(icon)
 font = pygame.font.Font("freesansbold.ttf", 32)
 
 
-def process_inputs():
-    global accelerated_mode, training, accelerated_factor
-    if keys[pygame.K_a] and not previous_keys[pygame.K_a]:
-        accelerated_mode = not accelerated_mode
-    if keys[pygame.K_PLUS] and not previous_keys[pygame.K_PLUS]:
-        accelerated_factor += 1
-    if keys[pygame.K_MINUS] and not previous_keys[pygame.K_MINUS]:
-        accelerated_factor -= 1
-    accelerated_factor = min(max(1, accelerated_factor), 10)
-
-
 # Game Loop
 running = True
-accelerated_mode = (
-    False  # If the execution is in accelerated_mode (faster than real world)
-)
-accelerated_factor = 2
 previous_keys = pygame.key.get_pressed()
 
+# Neural Network loaded after the training
+net = keras.models.load_model("my_model")
 
+# Pygame loop for running the game
 while running:
 
     clock.tick(60)
     keys = pygame.key.get_pressed()
-    process_inputs()
-    simulation.simulate(keys, previous_keys)
+    simulation.simulate(net, keys, previous_keys)
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
