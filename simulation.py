@@ -10,7 +10,7 @@ screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 # Important lines for the code, change the second line to False if the agent is playing or if you are running any test
 # Change to True if you want the agent to play and to False otherwise
 IsAgentPlaying = True
-SaveState = True  # Change to True if you want to save the game state to the .csv and to False otherwise
+SaveState = False  # Change to True if you want to save the game state to the .csv and to False otherwise
 
 # Player
 BIRD_SIZE = 46
@@ -293,7 +293,7 @@ def show_player_left(x, y):
     screen.blit(bird_leftImg, (x, y))
 
 
-# The main function that calls other functions and
+# The main function that calls other functions and runs the game
 def simulate(net, keys, previous_keys):
 
     screen.fill(SCREEN_COLOR)
