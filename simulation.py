@@ -1,6 +1,6 @@
 import pygame
 import numpy as np
-import pandas as pd
+from utils import game_state
 import time
 
 SCREEN_WIDTH = 484
@@ -9,7 +9,7 @@ screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 
 # Important lines for the code, change the second line to False if the agent is playing or if you are running any test
 # Change to True if you want the agent to play and to False otherwise
-IsAgentPlaying = True
+IsAgentPlaying = False
 SaveState = False  # Change to True if you want to save the game state to the .csv and to False otherwise
 
 # Player
@@ -39,7 +39,7 @@ NUM_SPIKES = 3
 
 
 # Spikes
-matrix_spikes = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+spikes_matrix = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 spike_height = 50
 spike_width = 28
 gap = 14
@@ -50,53 +50,39 @@ RIGHT_SPIKE_HITBOX = SCREEN_WIDTH - SPIKE_HITBOX_WIDTH
 
 # Score
 score_value = 0
+GAME_STATE = game_state(playerX, playerY, spikes_matrix)
 
 # Function for saving the game state to the .csv
-def save_state(jump):
-    global previous_x, previous_y
-    data = {
-        "X": [],
-        "Y": [],
-        "Previous_X": [],
-        "Previous_Y": [],
-        "Spikes_Matrix": [],
-        "Jump": [],
-    }
-    data["X"].append(playerX)
-    data["Y"].append(playerY)
-    data["Previous_X"].append(previous_x)
-    data["Previous_Y"].append(previous_y)
-    data["Spikes_Matrix"].append(matrix_spikes)
-    data["Jump"].append(jump)
-    save_data = pd.DataFrame(data)
-    save_data.to_csv("data.csv", mode="a", header=False, index=False)
-    previous_x = playerX
-    previous_y = playerY
+def save_state(state: game_state, jump: bool):
+    state.save_state(jump)
+    state.previous_x = state.x
+    state.previous_y = state.y
+    return state
 
 
 # The functions below are used to create the simulation in pygame and run the game
-def alive_right(birdX, birdY):
-    show_player_right(birdX, birdY)
-    global playerX
-    if birdX >= SCREEN_WIDTH - 46:
-        playerX = SCREEN_WIDTH - 46
-        hit_wall()
-    if check_spikes():
-        die()
+def alive_right(state):
+    show_player_right(state.x, state.y)
+    if state.x >= SCREEN_WIDTH - 46:
+        state.x = SCREEN_WIDTH - 46
+        state = hit_wall(state)
+    if check_spikes(state):
+        state = die()
+    return state
 
 
-def alive_left(birdX, birdY):
-    show_player_left(birdX, birdY)
-    global playerX
-    if birdX <= 0:
-        playerX = 0
-        hit_wall()
-    if check_spikes():
-        die()
+def alive_left(state):
+    show_player_left(state.x, state.y)
+    if state.x <= 0:
+        state.x = 0
+        state = hit_wall(state)
+    if check_spikes(state):
+        state = die()
+    return state
 
 
-def hit_wall():
-    global matrix_spikes, goingright, playerX_velocity, score_value
+def hit_wall(state):
+    global spikes_matrix, goingright, playerX_velocity, score_value
     goingright = not goingright
     score_value = score_value + 1
     playerX_velocity = -playerX_velocity
@@ -108,27 +94,27 @@ def hit_wall():
         num_spikes = NUM_SPIKES
 
     for i in range(12):
-        matrix_spikes[i] = 0
+        state.spikes_matrix[i] = 0
     for i in range(num_spikes):
         randint = np.random.randint(12, size=1)[0]
-        while matrix_spikes[randint]:
+        while state.spikes_matrix[randint]:
             randint = (randint + 1) % 12
-        matrix_spikes[randint] = 1
+        state.spikes_matrix[randint] = 1
+    return state
 
 
 def die():
-    global ALIVE, playerX, playerY, playerX_velocity, playerY_velocity, goingright, matrix_spikes, NUM_SPIKES
+    global ALIVE, playerX_velocity, playerY_velocity, goingright, NUM_SPIKES
     if score_value > 0 and ALIVE:
         save_score()
     ALIVE = False
     goingright = True
-    playerX = SCREEN_WIDTH / 2 - 46 / 2
-    playerY = 70 / 2 + SCREEN_HEIGHT / 2 - 46 / 2
     playerX_velocity = 4
     playerY_velocity = 0
-    matrix_spikes = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     NUM_SPIKES = 3
     time.sleep(0.4)
+    state = game_state(playerX, playerY, spikes_matrix)
+    return state
 
 
 # Function used to save the score to the .txt after you die
@@ -138,7 +124,7 @@ def save_score():
     f.close()
 
 
-def show_spikes():
+def show_spikes(state: game_state):
     spike_y = 10 + 60 + gap
     spike_x = gap * 2
     y_top = 10 + 60
@@ -146,7 +132,7 @@ def show_spikes():
     pygame.draw.rect(screen, SPIKE_COLOR, pygame.Rect(0, 0, SCREEN_WIDTH, 10 + 60))
     # Side spikes
     for i in range(12):
-        if matrix_spikes[i]:
+        if state.spikes_matrix[i]:
             show_spike(spike_y + (spike_height + gap) * i, goingright)
     for i in range(7):
         x_final = spike_x + spike_height
@@ -198,56 +184,55 @@ def show_score(x, y):
     screen.blit(score, (x, y))
 
 
-def check_spikes():
+def check_spikes(state):
     dead = False
-    if playerY >= SCREEN_HEIGHT - 46 - spike_width + 16:
-        dead = True
-    if playerY <= 60 + spike_width - 16:
-        dead = True
-    if goingright and playerX + BIRD_SIZE >= RIGHT_SPIKE_HITBOX:
-        dead = check_spikes_right()
+    if state.x >= SCREEN_HEIGHT - 46 - spike_width + 16:
+        return True
+    if state.y <= 60 + spike_width - 16:
+        return True
+    if goingright and state.x + BIRD_SIZE >= RIGHT_SPIKE_HITBOX:
+        dead = check_spikes_right(state)
         if dead:
             return dead
-    if not goingright and playerX <= SPIKE_HITBOX_WIDTH:
-        dead = check_spikes_left()
+    if not goingright and state.x <= SPIKE_HITBOX_WIDTH:
+        dead = check_spikes_left(state)
         if dead:
             return dead
-
     return dead
 
 
-def check_spikes_left():
-    y_real = playerY - 70
+def check_spikes_left(state):
+    y_real = state.y - 70
     index = int(y_real / (gap + spike_height))
-    vetor = [(index - 1) % 12, index, (index + 1) % 12]
-    for i in vetor:
-        if matrix_spikes[i]:
+    vector = [(index - 1) % 12, index, (index + 1) % 12]
+    for i in vector:
+        if state.spikes_matrix[i]:
             spike_hitbox = pygame.Rect(
                 0,
                 HEIGHTS_OF_SPIKES_HITBOX[i] - SPIKE_HITBOX_HEIGHT / 2,
                 SPIKE_HITBOX_WIDTH,
                 SPIKE_HITBOX_HEIGHT,
             )
-            bird_hitbox = pygame.Rect(playerX, playerY, BIRD_SIZE, BIRD_SIZE)
+            bird_hitbox = pygame.Rect(state.x, state.y, BIRD_SIZE, BIRD_SIZE)
             hit = pygame.Rect.colliderect(spike_hitbox, bird_hitbox)
             if hit:
                 return True
     return False
 
 
-def check_spikes_right():
-    y_real = playerY - 70
+def check_spikes_right(state):
+    y_real = state.y - 70
     index = int(y_real / (gap + spike_height))
     vetor = [(index - 1) % 12, index, (index + 1) % 12]
     for i in vetor:
-        if matrix_spikes[i]:
+        if state.spikes_matrix[i]:
             spike_hitbox = pygame.Rect(
                 RIGHT_SPIKE_HITBOX,
                 HEIGHTS_OF_SPIKES_HITBOX[i] - SPIKE_HITBOX_HEIGHT / 2,
                 SPIKE_HITBOX_WIDTH,
                 SPIKE_HITBOX_HEIGHT,
             )
-            bird_hitbox = pygame.Rect(playerX, playerY, BIRD_SIZE, BIRD_SIZE)
+            bird_hitbox = pygame.Rect(state.x, state.y, BIRD_SIZE, BIRD_SIZE)
             hit = pygame.Rect.colliderect(spike_hitbox, bird_hitbox)
             if hit:
                 return True
@@ -271,12 +256,12 @@ def scheduler():
         SPIKE_COLOR = DEATH_SPIKE_COLOR
 
 
-def game_over(keys, previous_keys):
+def game_over(keys, previous_keys, state):
     global ALIVE, score_value, playerY_velocity, SCREEN_COLOR, SPIKE_COLOR
     over_font = pygame.font.Font("freesansbold.ttf", 32)
     over_text = over_font.render("PRESS SPACE TO START", True, (255, 255, 255))
     screen.blit(over_text, (0 + 50, SCREEN_HEIGHT / 2 + 100))
-    show_player_right(playerX, playerY)
+    show_player_right(state.x, state.y)
     SCREEN_COLOR = (200, 200, 200)
     SPIKE_COLOR = (130, 130, 130)
     if keys[pygame.K_SPACE] and not previous_keys[pygame.K_SPACE] or IsAgentPlaying:
@@ -297,7 +282,7 @@ def show_player_left(x, y):
 def simulate(net, keys, previous_keys):
 
     screen.fill(SCREEN_COLOR)
-    global playerY_velocity, playerX, playerY, ALIVE
+    global playerY_velocity, ALIVE, GAME_STATE
     if ALIVE:
         playerY_velocity = playerY_velocity - gravity
         jump = 0
@@ -306,12 +291,12 @@ def simulate(net, keys, previous_keys):
         if IsAgentPlaying:
             input_predict = [
                 [
-                    playerX + playerX_velocity,
-                    playerY - playerY_velocity,
-                    playerX,
-                    playerY,
-                    *matrix_spikes,
+                    GAME_STATE.x + playerX_velocity,
+                    GAME_STATE.y - playerY_velocity,
+                    GAME_STATE.x,
+                    GAME_STATE.y,
                 ]
+                + [spike for spike in GAME_STATE.spikes_matrix]
             ]
             jump_predict = net.predict(input_predict)
             print(jump_predict[0][0])
@@ -321,17 +306,17 @@ def simulate(net, keys, previous_keys):
             playerY_velocity = up_velocity
             jump = 1
         if SaveState:
-            save_state(jump)
-        playerX = playerX + playerX_velocity
-        playerY = playerY - playerY_velocity
+            GAME_STATE = save_state(GAME_STATE, jump)
+        GAME_STATE.x = GAME_STATE.x + playerX_velocity
+        GAME_STATE.y = GAME_STATE.y - playerY_velocity
         if goingright:
-            alive_right(playerX, playerY)
+            GAME_STATE = alive_right(GAME_STATE)
         else:
-            alive_left(playerX, playerY)
+            GAME_STATE = alive_left(GAME_STATE)
 
-        show_spikes()
+        show_spikes(GAME_STATE)
         show_score(10, 10)
 
     else:
-        game_over(keys, previous_keys)
+        game_over(keys, previous_keys, GAME_STATE)
         show_score(10, 10)
