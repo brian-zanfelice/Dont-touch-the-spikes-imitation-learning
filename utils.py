@@ -35,6 +35,7 @@ class game_state:
         data["Previous_X"].append(self.previous_x)
         data["Previous_Y"].append(self.previous_y)
         data["X_velocity"].append(x_velocity)
+
         for num, spike in enumerate(self.spikes_matrix):
             data[f"Spike_{num}"].append(spike)
         data["Jump"].append(jump)

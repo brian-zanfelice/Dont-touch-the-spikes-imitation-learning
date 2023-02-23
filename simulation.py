@@ -9,7 +9,7 @@ screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 
 # Change to True if you want the agent to play and to False otherwise
 IsAgentPlaying = False
-SaveState = True  # Change to True if you want to save the game state to the .csv and to False otherwise
+SaveState = False  # Change to True if you want to save the game state to the .csv and to False otherwise
 
 # Player
 BIRD_SIZE = 46
@@ -126,13 +126,16 @@ def save_score():
 def show_spikes(state: game_state):
     spike_y = 10 + 60 + GAP
     spike_x = GAP * 2
+
     y_top = 10 + 60
     y_bottom = SCREEN_HEIGHT - 1
     pygame.draw.rect(screen, SPIKE_COLOR, pygame.Rect(0, 0, SCREEN_WIDTH, 10 + 60))
     # Side spikes
     for i in range(12):
         if state.spikes_matrix[i]:
+
             show_spike(spike_y + (spike_height + GAP) * i, goingright)
+
     for i in range(7):
         x_final = spike_x + spike_height
         # Top spikes
@@ -203,6 +206,7 @@ def check_spikes(state):
 def check_spikes_left(state):
     y_real = state.y - 70
     index = int(y_real / (GAP + spike_height))
+
     vector = [(index - 1) % 12, index, (index + 1) % 12]
     for i in vector:
         if state.spikes_matrix[i]:
@@ -221,7 +225,9 @@ def check_spikes_left(state):
 
 def check_spikes_right(state):
     y_real = state.y - 70
+
     index = int(y_real / (GAP + spike_height))
+
     vetor = [(index - 1) % 12, index, (index + 1) % 12]
     for i in vetor:
         if state.spikes_matrix[i]:
