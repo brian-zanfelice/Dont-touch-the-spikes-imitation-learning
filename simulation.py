@@ -7,10 +7,9 @@ SCREEN_WIDTH = 484
 SCREEN_HEIGHT = 784 + 10 + 60
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 
-# Important lines for the code, change the second line to False if the agent is playing or if you are running any test
 # Change to True if you want the agent to play and to False otherwise
 IsAgentPlaying = False
-SaveState = False  # Change to True if you want to save the game state to the .csv and to False otherwise
+SaveState = True  # Change to True if you want to save the game state to the .csv and to False otherwise
 
 # Player
 BIRD_SIZE = 46
@@ -42,7 +41,7 @@ NUM_SPIKES = 3
 spikes_matrix = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 spike_height = 50
 spike_width = 28
-gap = 14
+GAP = 14
 HEIGHTS_OF_SPIKES_HITBOX = [109, 173, 237, 301, 365, 429, 493, 557, 621, 685, 749, 813]
 SPIKE_HITBOX_HEIGHT = 15
 SPIKE_HITBOX_WIDTH = 20
@@ -53,8 +52,8 @@ score_value = 0
 GAME_STATE = game_state(playerX, playerY, spikes_matrix)
 
 # Function for saving the game state to the .csv
-def save_state(state: game_state, jump: bool):
-    state.save_state(jump)
+def save_state(state: game_state, jump: bool, x_velocity: float):
+    state.save_state(jump, x_velocity)
     state.previous_x = state.x
     state.previous_y = state.y
     return state
@@ -125,15 +124,15 @@ def save_score():
 
 
 def show_spikes(state: game_state):
-    spike_y = 10 + 60 + gap
-    spike_x = gap * 2
+    spike_y = 10 + 60 + GAP
+    spike_x = GAP * 2
     y_top = 10 + 60
     y_bottom = SCREEN_HEIGHT - 1
     pygame.draw.rect(screen, SPIKE_COLOR, pygame.Rect(0, 0, SCREEN_WIDTH, 10 + 60))
     # Side spikes
     for i in range(12):
         if state.spikes_matrix[i]:
-            show_spike(spike_y + (spike_height + gap) * i, goingright)
+            show_spike(spike_y + (spike_height + GAP) * i, goingright)
     for i in range(7):
         x_final = spike_x + spike_height
         # Top spikes
@@ -156,7 +155,7 @@ def show_spikes(state: game_state):
                 ((spike_x + x_final) / 2, y_bottom - spike_width),
             ),
         )
-        spike_x = spike_x + spike_height + gap
+        spike_x = spike_x + spike_height + GAP
 
 
 def show_spike(y_0, right):
@@ -186,15 +185,15 @@ def show_score(x, y):
 
 def check_spikes(state):
     dead = False
-    if state.x >= SCREEN_HEIGHT - 46 - spike_width + 16:
+    if state.y >= SCREEN_HEIGHT - 46 - spike_width + 16:
         return True
     if state.y <= 60 + spike_width - 16:
         return True
-    if goingright and state.x + BIRD_SIZE >= RIGHT_SPIKE_HITBOX:
+    if goingright and (state.x + BIRD_SIZE >= RIGHT_SPIKE_HITBOX):
         dead = check_spikes_right(state)
         if dead:
             return dead
-    if not goingright and state.x <= SPIKE_HITBOX_WIDTH:
+    elif not goingright and (state.x <= SPIKE_HITBOX_WIDTH):
         dead = check_spikes_left(state)
         if dead:
             return dead
@@ -203,7 +202,7 @@ def check_spikes(state):
 
 def check_spikes_left(state):
     y_real = state.y - 70
-    index = int(y_real / (gap + spike_height))
+    index = int(y_real / (GAP + spike_height))
     vector = [(index - 1) % 12, index, (index + 1) % 12]
     for i in vector:
         if state.spikes_matrix[i]:
@@ -222,7 +221,7 @@ def check_spikes_left(state):
 
 def check_spikes_right(state):
     y_real = state.y - 70
-    index = int(y_real / (gap + spike_height))
+    index = int(y_real / (GAP + spike_height))
     vetor = [(index - 1) % 12, index, (index + 1) % 12]
     for i in vetor:
         if state.spikes_matrix[i]:
@@ -283,10 +282,10 @@ def simulate(net, keys, previous_keys):
 
     screen.fill(SCREEN_COLOR)
     global playerY_velocity, ALIVE, GAME_STATE
+
     if ALIVE:
         playerY_velocity = playerY_velocity - gravity
         jump = 0
-
         # If the agent is playing
         if IsAgentPlaying:
             input_predict = [
@@ -295,6 +294,7 @@ def simulate(net, keys, previous_keys):
                     GAME_STATE.y - playerY_velocity,
                     GAME_STATE.x,
                     GAME_STATE.y,
+                    playerX_velocity,
                 ]
                 + [spike for spike in GAME_STATE.spikes_matrix]
             ]
@@ -306,7 +306,7 @@ def simulate(net, keys, previous_keys):
             playerY_velocity = up_velocity
             jump = 1
         if SaveState:
-            GAME_STATE = save_state(GAME_STATE, jump)
+            GAME_STATE = save_state(GAME_STATE, jump, playerX_velocity)
         GAME_STATE.x = GAME_STATE.x + playerX_velocity
         GAME_STATE.y = GAME_STATE.y - playerY_velocity
         if goingright:

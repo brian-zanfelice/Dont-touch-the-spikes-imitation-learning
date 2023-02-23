@@ -1,6 +1,6 @@
 import pygame
-import simulation
 import keras
+from simulation import simulate
 
 
 SCREEN_WIDTH = 484
@@ -28,7 +28,7 @@ while running:
 
     clock.tick(60)
     keys = pygame.key.get_pressed()
-    simulation.simulate(net, keys, previous_keys)
+    simulate(net, keys, previous_keys)
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
