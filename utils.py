@@ -9,12 +9,13 @@ class game_state:
         self.previous_y = y
         self.spikes_matrix = spikes_matrix
 
-    def save_state(self, jump: bool):
+    def save_state(self, jump: bool, x_velocity: float):
         data = {
             "X": [],
             "Y": [],
             "Previous_X": [],
             "Previous_Y": [],
+            "X_velocity": [],
             "Spike_0": [],
             "Spike_1": [],
             "Spike_2": [],
@@ -33,6 +34,8 @@ class game_state:
         data["Y"].append(self.y)
         data["Previous_X"].append(self.previous_x)
         data["Previous_Y"].append(self.previous_y)
+        data["X_velocity"].append(x_velocity)
+
         for num, spike in enumerate(self.spikes_matrix):
             data[f"Spike_{num}"].append(spike)
         data["Jump"].append(jump)
