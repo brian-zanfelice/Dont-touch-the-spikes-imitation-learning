@@ -40,7 +40,3 @@ class game_state:
         data["Jump"].append(jump)
         save_data = pd.DataFrame(data)
         save_data.to_csv("data.csv", mode="a", header=False, index=False)
-
-
-def get_jump(model, input_predict):
-    return model.predict(input_predict)

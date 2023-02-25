@@ -9,7 +9,7 @@ screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 
 # Change to True if you want the agent to play and to False otherwise
 IS_AGENT_PLAYING = False
-SAVE_STATE = False  # Change to True if you want to save the game state to the .csv and to False otherwise
+SAVE_STATE = True  # Change to True if you want to save the game state to the .csv and to False otherwise
 JUMP_THRESHOLD = 0.07
 
 # Player
