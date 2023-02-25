@@ -8,8 +8,9 @@ SCREEN_HEIGHT = 784 + 10 + 60
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 
 # Change to True if you want the agent to play and to False otherwise
-IsAgentPlaying = False
-SaveState = False  # Change to True if you want to save the game state to the .csv and to False otherwise
+IS_AGENT_PLAYING = False
+SAVE_STATE = True  # Change to True if you want to save the game state to the .csv and to False otherwise
+JUMP_THRESHOLD = 0.07
 
 # Player
 BIRD_SIZE = 46
@@ -38,7 +39,7 @@ NUM_SPIKES = 3
 
 
 # Spikes
-spikes_matrix = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+SPIKES_MATRIX = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 spike_height = 50
 spike_width = 28
 GAP = 14
@@ -49,7 +50,7 @@ RIGHT_SPIKE_HITBOX = SCREEN_WIDTH - SPIKE_HITBOX_WIDTH
 
 # Score
 score_value = 0
-GAME_STATE = game_state(playerX, playerY, spikes_matrix)
+GAME_STATE = game_state(playerX, playerY, SPIKES_MATRIX)
 
 # Function for saving the game state to the .csv
 def save_state(state: game_state, jump: bool, x_velocity: float):
@@ -66,7 +67,7 @@ def alive_right(state):
         state.x = SCREEN_WIDTH - 46
         state = hit_wall(state)
     if check_spikes(state):
-        state = die()
+        return die()
     return state
 
 
@@ -76,12 +77,12 @@ def alive_left(state):
         state.x = 0
         state = hit_wall(state)
     if check_spikes(state):
-        state = die()
+        return die()
     return state
 
 
 def hit_wall(state):
-    global spikes_matrix, goingright, playerX_velocity, score_value
+    global goingright, playerX_velocity, score_value
     goingright = not goingright
     score_value = score_value + 1
     playerX_velocity = -playerX_velocity
@@ -111,14 +112,17 @@ def die():
     playerX_velocity = 4
     playerY_velocity = 0
     NUM_SPIKES = 3
-    time.sleep(0.4)
-    state = game_state(playerX, playerY, spikes_matrix)
+    time.sleep(0.35)
+    state = game_state(playerX, playerY, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
     return state
 
 
 # Function used to save the score to the .txt after you die
 def save_score():
-    f = open("score.txt", "a")
+    file = "score.txt"
+    if IS_AGENT_PLAYING:
+        file = "agent_score.txt"
+    f = open(file, "a")
     f.write(str(score_value) + "\n")
     f.close()
 
@@ -269,7 +273,7 @@ def game_over(keys, previous_keys, state):
     show_player_right(state.x, state.y)
     SCREEN_COLOR = (200, 200, 200)
     SPIKE_COLOR = (130, 130, 130)
-    if keys[pygame.K_SPACE] and not previous_keys[pygame.K_SPACE] or IsAgentPlaying:
+    if (keys[pygame.K_SPACE] and not previous_keys[pygame.K_SPACE]) or IS_AGENT_PLAYING:
         playerY_velocity = up_velocity
         ALIVE = True
         score_value = 0
@@ -293,7 +297,7 @@ def simulate(net, keys, previous_keys):
         playerY_velocity = playerY_velocity - gravity
         jump = 0
         # If the agent is playing
-        if IsAgentPlaying:
+        if IS_AGENT_PLAYING:
             input_predict = [
                 [
                     GAME_STATE.x + playerX_velocity,
@@ -306,12 +310,12 @@ def simulate(net, keys, previous_keys):
             ]
             jump_predict = net.predict(input_predict)
             print(jump_predict[0][0])
-            if jump_predict[0][0] >= 0.5:
+            if jump_predict[0][0] >= JUMP_THRESHOLD:
                 jump = 1
         if (keys[pygame.K_SPACE] and not previous_keys[pygame.K_SPACE]) or jump:
             playerY_velocity = up_velocity
             jump = 1
-        if SaveState:
+        if SAVE_STATE:
             GAME_STATE = save_state(GAME_STATE, jump, playerX_velocity)
         GAME_STATE.x = GAME_STATE.x + playerX_velocity
         GAME_STATE.y = GAME_STATE.y - playerY_velocity
@@ -319,7 +323,6 @@ def simulate(net, keys, previous_keys):
             GAME_STATE = alive_right(GAME_STATE)
         else:
             GAME_STATE = alive_left(GAME_STATE)
-
         show_spikes(GAME_STATE)
         show_score(10, 10)
 
