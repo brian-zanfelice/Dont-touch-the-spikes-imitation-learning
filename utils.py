@@ -35,9 +35,12 @@ class game_state:
         data["Previous_X"].append(self.previous_x)
         data["Previous_Y"].append(self.previous_y)
         data["X_velocity"].append(x_velocity)
-
         for num, spike in enumerate(self.spikes_matrix):
             data[f"Spike_{num}"].append(spike)
         data["Jump"].append(jump)
         save_data = pd.DataFrame(data)
         save_data.to_csv("data.csv", mode="a", header=False, index=False)
+
+
+def get_jump(model, input_predict):
+    return model.predict(input_predict)
