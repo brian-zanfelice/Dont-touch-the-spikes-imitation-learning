@@ -67,7 +67,7 @@ def alive_right(state):
         state.x = SCREEN_WIDTH - 46
         state = hit_wall(state)
     if check_spikes(state):
-        state = die()
+        return die()
     return state
 
 
@@ -77,7 +77,7 @@ def alive_left(state):
         state.x = 0
         state = hit_wall(state)
     if check_spikes(state):
-        state = die()
+        return die()
     return state
 
 
@@ -113,7 +113,7 @@ def die():
     playerY_velocity = 0
     NUM_SPIKES = 3
     time.sleep(0.35)
-    state = game_state(playerX, playerY, SPIKES_MATRIX)
+    state = game_state(playerX, playerY, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
     return state
 
 
@@ -323,7 +323,6 @@ def simulate(net, keys, previous_keys):
             GAME_STATE = alive_right(GAME_STATE)
         else:
             GAME_STATE = alive_left(GAME_STATE)
-
         show_spikes(GAME_STATE)
         show_score(10, 10)
 
